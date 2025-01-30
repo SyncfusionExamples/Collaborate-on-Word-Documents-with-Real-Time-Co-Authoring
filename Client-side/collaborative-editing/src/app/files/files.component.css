@@ -1,0 +1,53 @@
+*{
+    font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+.e-icons {
+    font-family: "e-icons" !important;
+}
+
+.action-btn{
+    border: none;
+    width: 50px;
+    height: 25px;
+    padding: 6px;
+    background-color: transparent;
+    border-radius: 4px;
+}
+
+.e-grid .e-headercelldiv {
+    
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}
+.e-grid .e-gridheader {   
+    color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* files.component.css */
+.share-button {
+    padding: 5px 10px;
+    background-color: #4889ef;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .file-icon {
+    vertical-align: sub;
+  }
+  
+  .file-name {
+    vertical-align: super;
+  }
+  
+  .dialog-heading {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .dialog-container-row {
+    margin-top: 10px;
+  }
+  

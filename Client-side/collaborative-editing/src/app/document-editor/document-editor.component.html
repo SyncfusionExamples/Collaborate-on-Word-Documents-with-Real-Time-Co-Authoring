@@ -1,0 +1,33 @@
+<div>
+    <div id="dialog-container" *ngIf="showDialog">
+      <ejs-dialog id='dialog' #ejDialog target="#dialog-container" [isModal]="true" header='Enter Your Name' [showCloseIcon]='true' [buttons]='dialogButtons' width='400px' (open)="onDialogOpen()">
+        <div>
+          <input type="text" id="userNameInput" [(ngModel)]="userName" placeholder="Enter your name" class="e-input" />
+        </div>
+      </ejs-dialog>
+    </div>
+    
+    <div *ngIf="isUserNameEntered">
+      <div id="documenteditor_titlebar" class="e-de-ctn-title" style="height:35px;"></div>
+      <ejs-documenteditorcontainer 
+        #documenteditor_default 
+        [enableToolbar]="true" 
+        [currentUser]="currentUser"
+        [toolbarItems]="toolbarItems"
+        (created)="onCreated()"
+        (contentChange)="onContentChange($event)" 
+        height="600px" 
+        style="display: block;">
+      </ejs-documenteditorcontainer>
+    </div>
+  
+    <div id="shareDialog" style="display: none;">
+      <div class="e-de-para-dlg-heading">
+        Share this URL with others for real-time editing
+      </div>
+      <div class="e-de-container-row">
+        <input type="text" id="share_url" class="e-input" readonly />
+      </div>
+    </div>
+  </div>
+  
