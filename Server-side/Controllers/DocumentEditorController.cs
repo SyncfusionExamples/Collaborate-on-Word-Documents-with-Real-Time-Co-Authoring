@@ -10,7 +10,7 @@ namespace CollaborativeEditingServerSide.Controllers
     [ApiController]
     public class DocumentEditorController : ControllerBase
     {
-
+        // Handles importing a document file and converting it to JSON format
         [AcceptVerbs("Post")]
         [HttpPost]
         [EnableCors("AllowAllOrigins")]
@@ -42,6 +42,7 @@ namespace CollaborativeEditingServerSide.Controllers
             }
         }
 
+        // Performs spell checking on the provided text
         [AcceptVerbs("Post")]
         [HttpPost]
         [EnableCors("AllowAllOrigins")]
@@ -60,6 +61,7 @@ namespace CollaborativeEditingServerSide.Controllers
             }
         }
 
+        // Performs spell checking for an entire page
         [AcceptVerbs("Post")]
         [HttpPost]
         [EnableCors("AllowAllOrigins")]
@@ -78,6 +80,7 @@ namespace CollaborativeEditingServerSide.Controllers
             }
         }
 
+        // Representing spell check request parameters
         public class SpellCheckJsonData
         {
             public int LanguageID { get; set; }
@@ -88,12 +91,14 @@ namespace CollaborativeEditingServerSide.Controllers
 
         }
 
+        // Representing parameters for clipboard operations
         public class CustomParameter
         {
             public string content { get; set; }
             public string type { get; set; }
         }
 
+        // Handles clipboard operations, converting document content into JSON 
         [AcceptVerbs("Post")]
         [HttpPost]
         [EnableCors("AllowAllOrigins")]
@@ -117,12 +122,15 @@ namespace CollaborativeEditingServerSide.Controllers
             return "";
         }
 
+        // Representing parameters for clipboard operations
         public class CustomRestrictParameter
         {
             public string passwordBase64 { get; set; }
             public string saltBase64 { get; set; }
             public int spinCount { get; set; }
         }
+
+        // Handles document editing restrictions
         [AcceptVerbs("Post")]
         [HttpPost]
         [EnableCors("AllowAllOrigins")]
@@ -134,6 +142,7 @@ namespace CollaborativeEditingServerSide.Controllers
             return WordDocument.ComputeHash(param.passwordBase64, param.saltBase64, param.spinCount);
         }
 
+        // Determines the document format based on file extension
         internal static FormatType GetFormatType(string format)
         {
             if (string.IsNullOrEmpty(format))
@@ -160,6 +169,8 @@ namespace CollaborativeEditingServerSide.Controllers
                     throw new NotSupportedException("EJ2 DocumentEditor does not support this file format.");
             }
         }
+
+        // Determines the document format type specifically for Word formats
         internal static WFormatType GetWFormatType(string format)
         {
             if (string.IsNullOrEmpty(format))

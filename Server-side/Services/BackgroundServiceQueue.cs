@@ -14,6 +14,7 @@ namespace CollaborativeEditingServerSide.Service
     {
         private readonly Channel<SaveInfo> _queue;
 
+        // Initializes a new instance of BackgroundTaskQueue 
         public BackgroundTaskQueue(int capacity)
         {
             // Capacity should be set based on the expected application load and
@@ -28,6 +29,7 @@ namespace CollaborativeEditingServerSide.Service
             _queue = Channel.CreateBounded<SaveInfo>(options);
         }
 
+        // Adds a SaveInfo work item to the queue
         public async ValueTask QueueBackgroundWorkItemAsync(SaveInfo workItem)
         {
             if (workItem == null)
@@ -38,6 +40,7 @@ namespace CollaborativeEditingServerSide.Service
             await _queue.Writer.WriteAsync(workItem);
         }
 
+        // Retrieves and removes a SaveInfo work item from the queue
         public async ValueTask<SaveInfo> DequeueAsync(CancellationToken cancellationToken)
         {
             var workItem = await _queue.Reader.ReadAsync(cancellationToken);

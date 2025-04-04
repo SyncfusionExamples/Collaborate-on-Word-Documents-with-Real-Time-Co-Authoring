@@ -7,20 +7,32 @@ using System.Data;
 using Microsoft.CodeAnalysis;
 using StackExchange.Redis;
 using Newtonsoft.Json;
+using Azure.Storage.Blobs;
 using CollaborativeEditingServerSide.Model;
 using CollaborativeEditingServerSide.Service;
+using Azure.Storage.Blobs.Specialized;
 
 namespace CollaborativeEditingServerSide.Controllers
 {
+    /// <summary>
+    /// API Controller for handling real-time collaborative editing requests,
+    /// such as importing files, updating actions, retrieving actions, and
+    /// loading/saving documents from Azure Blob storage.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class CollaborativeEditingController : ControllerBase
     {
-        private static string fileLocation;
         private IBackgroundTaskQueue saveTaskQueue;
         private static IConnectionMultiplexer _redisConnection;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IHubContext<DocumentEditorHub> _hubContext;
+        // Azure Blob storage connection string, used to create BlobServiceClient instances.
+        private static string _storageConnectionString;
+        // The Azure Blob container name where documents are stored.
+        private static string _containerName;
+        // The root folder name in the container (e.g., "Files") for organizing documents.
+        private static string _rootFolderName;
 
         // Constructor for the CollaborativeEditingController
         public CollaborativeEditingController(IWebHostEnvironment hostingEnvironment,
@@ -30,11 +42,18 @@ namespace CollaborativeEditingServerSide.Controllers
             _hostingEnvironment = hostingEnvironment;
             _hubContext = hubContext;
             _redisConnection = redisConnection;
-            fileLocation = _hostingEnvironment.WebRootPath;
+            _storageConnectionString = config["connectionString"];
+            _containerName = config["containerName"];
+            _rootFolderName = "Files";
             saveTaskQueue = taskQueue;
         }
 
-        //Import document from wwwroot folder in web server.
+        /// <summary>
+        /// Imports a document from Azure Blob storage and applies any pending actions
+        /// from Redis to bring it up to date. Returns the final document in SFDT format.
+        /// </summary>
+        /// <param name="param">File info, including fileName and documentOwner (room ID).</param>
+        /// <returns>JSON-serialized DocumentContent with version and SFDT data.</returns>
         [HttpPost]
         [Route("ImportFile")]
         [EnableCors("AllowAllOrigins")]
@@ -42,17 +61,15 @@ namespace CollaborativeEditingServerSide.Controllers
         {
             try
             {
-                // Create a new instance of DocumentContent to hold the document data
+                // Prepare a container for returning document data
                 DocumentContent content = new DocumentContent();
-                // Retrieve the source document to be edited
-                // In this case, 'Giant Panda.docx' file from the wwwroot folder is opened.
-                // We can modify the code to retrieve the document from a different location or source.
-                Syncfusion.EJ2.DocumentEditor.WordDocument document = GetSourceDocument(param.fileName);
-                // Get the list of pending operations for the document
+                // Retrieve the source document from Azure
+                Syncfusion.EJ2.DocumentEditor.WordDocument document = await GetSourceDocumentFromAzureAsync(param.fileName);
+                // Get any pending actions for this document/room
                 List<ActionInfo> actions = await GetPendingOperations(param.documentOwner, 0, -1);
                 if (actions != null && actions.Count > 0)
                 {
-                    // If there are any pending actions, update the document with these actions
+                    // If pending actions exist, apply them to the document
                     document.UpdateActions(actions);
                 }
                 // Serialize the updated document to SFDT format
@@ -66,21 +83,25 @@ namespace CollaborativeEditingServerSide.Controllers
             }
             catch
             {
+                // Return null on failure
                 return null;
             }
         }
 
+        // Updates the action, modifies it if necessary, and notifies clients in the same room about the change
         [HttpPost]
         [Route("UpdateAction")]
         [EnableCors("AllowAllOrigins")]
         public async Task<ActionInfo> UpdateAction(ActionInfo param)
         {
+            // Adds the action to the cache
             ActionInfo modifiedAction = await AddOperationsToCache(param);
+            // Sends the updated action to all clients in the room to notify them of the change
             await _hubContext.Clients.Group(param.RoomName).SendAsync("dataReceived", "action", modifiedAction);
             return modifiedAction;
         }
 
-
+        // Gets the actions that are waiting to be synced or updated, based on the version the client has
         [HttpPost]
         [Route("GetActionsFromServer")]
         [EnableCors("AllowAllOrigins")]
@@ -120,6 +141,7 @@ namespace CollaborativeEditingServerSide.Controllers
             }
         }
 
+        // Method to add the action to the Redis cache, apply transformations, and handle cleared operations
         private async Task<ActionInfo> AddOperationsToCache(ActionInfo action)
         {
             int clientVersion = action.Version;
@@ -179,6 +201,7 @@ namespace CollaborativeEditingServerSide.Controllers
             return action;
         }
 
+        // Method to update the action record in the Redis cache
         private async void UpdateRecordToCache(int version, ActionInfo action, IDatabase database)
         {
             // Prepare Redis keys for accessing the room and its revision information
@@ -199,11 +222,9 @@ namespace CollaborativeEditingServerSide.Controllers
             // Execute the Lua script with the prepared keys and values
             // This script is likely updating the action in the room and possibly handling revision checks or updates
             await database.ScriptEvaluateAsync(CollaborativeEditingHelper.UpdateRecord, keys, values);
-
-            //List<ActionInfo> cachedActions = await GetPendingOperations(action.RoomName, 0, -1);
-            //Console.Write(cachedActions.Count);
         }
 
+        // Method to retrieve effective pending actions from Redis based on the given start index
         private async Task<List<ActionInfo>> GetEffectivePendingVersion(string roomName, int startIndex, IDatabase databse)
         {
 
@@ -249,18 +270,33 @@ namespace CollaborativeEditingServerSide.Controllers
             return actionInfoList;
         }
 
-        internal static Syncfusion.EJ2.DocumentEditor.WordDocument GetSourceDocument(string documentName)
+        internal static async Task<Syncfusion.EJ2.DocumentEditor.WordDocument> GetSourceDocumentFromAzureAsync(string documentName)
         {
-            string path = fileLocation + "\\" + documentName;
-            int index = path.LastIndexOf('.');
-            string type = index > -1 && index < path.Length - 1 ?
-              path.Substring(index) : ".docx";
-            Stream stream = System.IO.File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            // Build the blob path for the document.
+            var blobPath = GenerateDocumentBlobPath(documentName);
+
+            // Get a reference to the blob client for the specified document.
+            var blobClient = CreateBlobClient(blobPath);
+
+            // Download the blob content into a memory stream.
+            MemoryStream stream = new MemoryStream();
+            await blobClient.DownloadToAsync(stream);
+
+            // Reset the stream's position to the beginning.
+            stream.Position = 0;
+
+            // Determine the file format from the extension.
+            int index = documentName.LastIndexOf('.');
+            string type = index > -1 && index < documentName.Length - 1 ? documentName.Substring(index) : ".docx";
+
+            // Load the document using the Syncfusion DocumentEditor API.
             Syncfusion.EJ2.DocumentEditor.WordDocument document = Syncfusion.EJ2.DocumentEditor.WordDocument.Load(stream, GetFormatType(type));
+
             stream.Dispose();
             return document;
         }
 
+        // Determines the format type of the document based on its file extension
         internal static FormatType GetFormatType(string format)
         {
             if (string.IsNullOrEmpty(format))
@@ -286,6 +322,25 @@ namespace CollaborativeEditingServerSide.Controllers
                 default:
                     throw new NotSupportedException("EJ2 DocumentEditor does not support this file format.");
             }
+        }
+
+        /// <summary>
+        /// Generates the full blob path by combining the document name with the base file path
+        /// </summary>
+        /// <param name="documentName">Name of the target document</param>
+        /// <returns>Full blob path in format 'RootFolderName/{documentName}'</returns>
+        private static string GenerateDocumentBlobPath(string documentName) => $"{_rootFolderName}/{documentName}";
+
+        /// <summary>
+        /// Creates and returns a BlockBlobClient for interacting with a specific blob
+        /// </summary>
+        /// <param name="blobPath">The full path to the blob within the container</param>
+        /// <returns>Configured BlockBlobClient instance</returns>
+        private static BlockBlobClient CreateBlobClient(string blobPath)
+        {
+            var serviceClient = new BlobServiceClient(_storageConnectionString);
+            var containerClient = serviceClient.GetBlobContainerClient(_containerName);
+            return containerClient.GetBlockBlobClient(blobPath);
         }
     }
 }

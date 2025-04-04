@@ -7,22 +7,27 @@ namespace CollaborativeEditingServerSide.Service
 {
     public class QueuedHostedService : BackgroundService
     {
+        private readonly CollaborativeEditingController _collabController;
         static string fileLocation;
         static IConnectionMultiplexer _redisConnection;
         public IBackgroundTaskQueue TaskQueue { get; }
 
+        // Constructor for the QueuedHostedService
         public QueuedHostedService(IBackgroundTaskQueue taskQueue, IWebHostEnvironment hostingEnvironment, IConfiguration config, IConnectionMultiplexer redisConnection)
         {
             TaskQueue = taskQueue;
             fileLocation = hostingEnvironment.WebRootPath;
             _redisConnection = redisConnection;
+            //_collabController = collabController;
         }
 
+        // Executes the background processing when the service starts
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await BackgroundProcessing(stoppingToken);
         }
 
+        // Processes tasks from the queue until cancellation is requested
         private async Task BackgroundProcessing(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -31,7 +36,7 @@ namespace CollaborativeEditingServerSide.Service
 
                 try
                 {
-                    ApplyOperationsToSourceDocument(workItem.Action);
+                    //ApplyOperationsToSourceDocument(workItem.Action);
                     ClearRecordsFromRedisCache(workItem);
                 }
                 catch (Exception ex)
@@ -40,6 +45,8 @@ namespace CollaborativeEditingServerSide.Service
                 }
             }
         }
+
+        // Clears the Redis cache after saving document updates
         private async void ClearRecordsFromRedisCache(SaveInfo workItem)
         {
             //Delete the data in updatekey after updating the values in the document
@@ -54,10 +61,46 @@ namespace CollaborativeEditingServerSide.Service
             await database.KeyDeleteAsync(workItem.RoomName + CollaborativeEditingHelper.ActionsToRemoveSuffix);
         }
 
-        public void ApplyOperationsToSourceDocument(List<ActionInfo> actions)
+        // Applies the list of user actions to the source document
+        //public async Task ApplyOperationsToSourceDocument(List<ActionInfo> actions)
+        //{
+        //    // Load the document
+        //    Syncfusion.EJ2.DocumentEditor.WordDocument document = await _collabController.GetSourceDocumentFromAzureAsync("Giant Panda.docx");
+        //    CollaborativeEditingHandler handler = new CollaborativeEditingHandler(document);
+
+        //    // Process previous items
+        //    if (actions != null && actions.Count > 0)
+        //    {
+        //        foreach (ActionInfo info in actions)
+        //        {
+        //            if (!info.IsTransformed)
+        //            {
+        //                CollaborativeEditingHandler.TransformOperation(info, actions);
+        //            }
+        //        }
+
+        //        for (int i = 0; i < actions.Count; i++)
+        //        {
+        //            //Apply the operation to source document.
+        //            handler.UpdateAction(actions[i]);
+        //        }
+        //        MemoryStream stream = new MemoryStream();
+        //        Syncfusion.DocIO.DLS.WordDocument doc = WordDocument.Save(Newtonsoft.Json.JsonConvert.SerializeObject(handler.Document));
+        //        doc.Save(stream, Syncfusion.DocIO.FormatType.Docx);
+
+        //        //Save the document to file location. We can modified the below code and save the document to any location.
+        //        //Save the stream to the location you want.
+        //        SaveDocument(stream, "Getting Started.docx");
+        //        stream.Close();
+        //        document.Dispose();
+        //        handler = null;
+        //    }
+        //}
+
+        public async Task ApplyOperationsToSourceDocument(List<ActionInfo> actions)
         {
             // Load the document
-            Syncfusion.EJ2.DocumentEditor.WordDocument document = CollaborativeEditingController.GetSourceDocument("Giant Panda.docx");
+            Syncfusion.EJ2.DocumentEditor.WordDocument document = await CollaborativeEditingController.GetSourceDocumentFromAzureAsync("Giant Panda.docx");
             CollaborativeEditingHandler handler = new CollaborativeEditingHandler(document);
 
             // Process previous items
@@ -89,7 +132,7 @@ namespace CollaborativeEditingServerSide.Service
             }
         }
 
-        //Document is store in file stream, We can modify the code to store the document to any location based on your requirment.
+        // Saves the document stream to a file location
         private void SaveDocument(Stream document, string fileName)
         {
             string filePath = Path.Combine(fileLocation, fileName);

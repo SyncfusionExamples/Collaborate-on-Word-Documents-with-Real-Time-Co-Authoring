@@ -12,11 +12,14 @@ namespace CollaborativeEditingServerSide.Hubs
         private readonly IDatabase _db;
         private IBackgroundTaskQueue saveTaskQueue;
 
+        // Constructor for the DocumentEditorHub
         public DocumentEditorHub(IConnectionMultiplexer redisConnection, IBackgroundTaskQueue taskQueue)
         {
             _db = redisConnection.GetDatabase();
             saveTaskQueue = taskQueue;
         }
+
+        // Called when a new connection is established
         public override Task OnConnectedAsync()
         {
             // Send session id to client.
@@ -24,6 +27,7 @@ namespace CollaborativeEditingServerSide.Hubs
             return base.OnConnectedAsync();
         }
 
+        // Handles a user joining a group (room) for document editing
         public async Task JoinGroup(ActionInfo info)
         {
             // Set the connection ID to info
@@ -52,6 +56,8 @@ namespace CollaborativeEditingServerSide.Hubs
             // Notify all the exsisiting users in the group about the new user
             await Clients.GroupExcept(info.RoomName, Context.ConnectionId).SendAsync("dataReceived", "addUser", info);
         }
+
+        // Called when a user disconnects from the hub
         public override async Task OnDisconnectedAsync(Exception? e)
         {
             //Get the room name associated with the connection ID

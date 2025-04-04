@@ -45,6 +45,7 @@ builder.Services.AddSingleton<IBackgroundTaskQueue>(ctx =>
     return new BackgroundTaskQueue(200);
 });
 builder.Services.AddHostedService<QueuedHostedService>();
+builder.Services.AddScoped<IAzureDocumentStorageService, AzureDocumentStorageService>();
 
 var app = builder.Build();
 
