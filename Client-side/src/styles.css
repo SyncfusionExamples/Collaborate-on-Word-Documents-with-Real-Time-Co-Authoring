@@ -1,4 +1,15 @@
 @import '../node_modules/@syncfusion/ej2-base/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-inputs/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-popups/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-buttons/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-splitbuttons/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-navigations/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-layouts/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-grids/styles/material.css';
+@import '../node_modules/@syncfusion/ej2-angular-filemanager/styles/material.css';
+
+
+@import '../node_modules/@syncfusion/ej2-base/styles/material.css';
 @import '../node_modules/@syncfusion/ej2-buttons/styles/material.css';
 @import '../node_modules/@syncfusion/ej2-inputs/styles/material.css';
 @import '../node_modules/@syncfusion/ej2-popups/styles/material.css';
@@ -183,4 +194,20 @@
 
 #user-avatar {
   margin: 0px 5px;
+}
+
+#backward-icon {
+  cursor: pointer;
+  margin-right: 22px;
+}
+
+#file-manager-header {
+  background-color: #3f51b5;
+  color: #fff;
+  width: 100%;
+  font-size: 18px;
+  height: 35px;;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

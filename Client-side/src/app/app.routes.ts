@@ -4,5 +4,5 @@ import { DocumentEditorComponent } from './document-editor/document-editor.compo
 
 export const appRoutes: Routes= [
     { path: '', component: FilesComponent},
-    { path: 'detail/:documentID/:fileName/:roomId', component: DocumentEditorComponent},  
+    { path: 'detail/:fileName/:roomId', component: DocumentEditorComponent},  
   ];

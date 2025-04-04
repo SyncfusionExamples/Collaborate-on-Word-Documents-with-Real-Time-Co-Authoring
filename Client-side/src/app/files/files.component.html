@@ -1,40 +1,10 @@
-<ejs-grid [dataSource]="files" (rowSelected)="onFileClick($event)">
-  <e-columns>
-    
-    <e-column field="fileName" headerText="File Name">
-      <ng-template #template let-data>
-        <svg class="file-icon" width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
-          <path d="M3 3C3 1.34315 4.34315 0 6 0H16.7574C17.553 0 18.3161 0.316071 18.8787 0.87868L26.1213 8.12132C26.6839 8.68393 27 9.44699 27 10.2426V27C27 28.6569 25.6569 30 24 30H6C4.34315 30 3 28.6569 3 27V3Z" fill="#4889EF"/>
-          <path d="M17.5 11H25V10.5042C25 9.76949 24.7304 9.0603 24.2422 8.51114L19.9463 3.67818C18.9974 2.61074 17.6374 2 16.2092 2H16V9.5C16 10.3284 16.6716 11 17.5 11Z" fill="#D6E5FE"/>
-          <path d="M10.3044 12H10.8868H11.104H11.6817L12.6231 16.3922L13.3963 12H15L13.5719 19H12.777H12.5552H11.8943L10.993 15.0093L10.1103 19H9.44945H9.22761H8.42808L7 12H8.60832L9.38188 16.3816L10.3044 12Z" fill="white"/>
-          <rect x="7" y="21" width="16" height="2" rx="1" fill="white"/>
-          <rect x="7" y="25" width="11" height="2" rx="1" fill="white"/>
-        </svg>
-        <span class="file-name">{{ data.fileName }}</span>
-      </ng-template>
-    </e-column>
-
-    <e-column field="authorName" headerText="Author"></e-column>
-
-    <e-column headerText="Actions">
-      <ng-template #template let-data>
-        <button class="share-button" (click)="onShareClick(data, $event)">
-          Share
-        </button>
-      </ng-template>
-    </e-column>
-  </e-columns>
-</ejs-grid>
-
-<div *ngIf="showDialog">
-  <div id="dialog-container">
-    <ejs-dialog id='dialog' #ejDialog target="#dialog-container" [isModal]="true" header='Share Document' [showCloseIcon]='true' [buttons]='dialogButton' width='500px' (open)="onDialogOpen()">
-      <div class="dialog-heading">
-        Share this URL with others for real-time editing
-      </div>
-      <div class="dialog-container-row">
-        <input type="text" id="share_url" [(ngModel)]="collaborativeUrl" class="e-input" readonly />
-      </div>
-    </ejs-dialog>
+<div class="file-manager-container">
+  <div id="file-manager-header">
+    Azure blob storage
   </div>
+  <ejs-filemanager 
+    [ajaxSettings]="ajaxSettings"
+    (fileSelect)="onFileSelect($event)"
+    height="675px">
+  </ejs-filemanager>
 </div>
